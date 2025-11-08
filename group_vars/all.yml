@@ -1,0 +1,11 @@
+---
+# Variables for all hosts
+ansible_user: ansible
+ansible_ssh_private_key_file: ~/.ssh/id_rsa
+
+# Common variables
+timezone: UTC
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+

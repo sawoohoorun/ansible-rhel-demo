@@ -1,0 +1,85 @@
+---
+- name: Gather all facts from RHEL 9 servers
+  hosts: rhel_servers
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Filter for RHEL 9 only
+    target_rhel_version: "9"
+  
+  pre_tasks:
+    - name: Display connection information
+      debug:
+        msg: "Connecting to {{ inventory_hostname }} ({{ ansible_host | default(inventory_hostname) }})"
+  
+  tasks:
+    - name: Verify RHEL version
+      debug:
+        msg: "Detected OS: {{ ansible_distribution }} {{ ansible_distribution_version }} (Major: {{ ansible_distribution_major_version }})"
+      when: ansible_facts is defined
+    
+    - name: Fail if not RHEL 9
+      fail:
+        msg: "This playbook is designed for RHEL 9. Detected: {{ ansible_distribution }} {{ ansible_distribution_major_version }}"
+      when: 
+        - ansible_distribution_major_version | string != target_rhel_version
+        - ansible_distribution | lower == "redhat"
+    
+    - name: Gather all system facts
+      setup:
+        gather_subset:
+          - all
+        gather_timeout: 30
+    
+    - name: Display system information summary
+      debug:
+        msg:
+          - "Hostname: {{ ansible_hostname }}"
+          - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Kernel: {{ ansible_kernel }}"
+          - "Architecture: {{ ansible_architecture }}"
+          - "CPU Cores: {{ ansible_processor_vcpus }}"
+          - "Total Memory: {{ ansible_memtotal_mb }} MB"
+          - "Available Memory: {{ ansible_memfree_mb }} MB"
+          - "IP Addresses: {{ ansible_all_ipv4_addresses }}"
+          - "Default IPv4: {{ ansible_default_ipv4.address | default('N/A') }}"
+    
+    - name: Display package manager information
+      debug:
+        msg:
+          - "Package Manager: {{ ansible_pkg_mgr }}"
+          - "Available Packages: {{ ansible_pkg_mgr | default('N/A') }}"
+      when: ansible_pkg_mgr is defined
+    
+    - name: Display disk information
+      debug:
+        msg: "Disk Devices: {{ ansible_devices.keys() | list }}"
+      when: ansible_devices is defined
+    
+    - name: Display network interfaces
+      debug:
+        msg: "Network Interfaces: {{ ansible_interfaces | list }}"
+      when: ansible_interfaces is defined
+    
+    - name: Display mounted filesystems
+      debug:
+        var: ansible_mounts
+      when: ansible_mounts is defined
+    
+    - name: Save facts to file
+      copy:
+        content: "{{ ansible_facts | to_nice_json }}"
+        dest: "/tmp/{{ inventory_hostname }}_facts.json"
+        mode: '0644'
+      delegate_to: localhost
+      become: no
+      run_once: false
+      when: ansible_facts is defined
+
+  post_tasks:
+    - name: Summary of fact gathering
+      debug:
+        msg: "All facts gathered successfully for {{ inventory_hostname }}"
+      run_once: false
+

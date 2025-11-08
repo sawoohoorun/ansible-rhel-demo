@@ -1,0 +1,12 @@
+---
+# Main playbook
+- name: Main site playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure system is up to date
+      package:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "RedHat"
+
